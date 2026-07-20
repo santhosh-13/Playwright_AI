@@ -1,0 +1,96 @@
+01 What is MCP
+
+MCP stands for Model Context Protocol. It is an open protocol released by Anthropic in November 2024.
+Think of MCP as a USB-C port for AI models. Before MCP, every AI tool needed a custom integration to connect with external tools like browsers, databases, or file systems. MCP standardizes this — any MCP-compatible AI client can talk to any MCP server.
+
+Two key pieces:
+
+MCP Client — the AI-side application (VS Code with Copilot, Cursor, Claude Code, etc.)
+MCP Server — a process that exposes tools (browser control, file access, database queries)
+You type a prompt in the client. The client asks the AI which tools it needs. The AI calls the tools through the server. The server executes and returns results.
+
+02 What is Playwright MCP
+
+Playwright MCP is Microsoft's official MCP server that wraps Playwright's browser automation as tools an AI can call.
+When connected to Playwright MCP, an AI agent can:
+
+Open URLs
+Click buttons, fill forms, hover elements
+Read the DOM through accessibility snapshots
+Take screenshots
+Watch network traffic and console messages
+Run tests in a real browser
+The key difference from screenshot-based AI browsers: Playwright MCP reads the accessibility tree instead of pixels. This is the same tree a screen reader uses. It is faster, cheaper, and more deterministic — and it is exactly why getByRole is the recommended locator strategy in Playwright.
+
+03 The three agents
+
+Starting from Playwright v1.56 (October 2025), Playwright ships three built-in AI agents.
+Each is a Markdown file that instructs the AI how to behave for a specific role.
+
+Role 01
+
+Planner
+Explores the app in a real browser and writes a plain-English test plan. Never touches code.
+
+Input
+A URL and an instruction like "cover the checkout flow"
+Output
+A numbered Markdown test plan in specs/\*.md
+Constraint
+Read-only browser. No destructive clicks. Writes only to specs/.
+
+Role 02
+
+Generator
+Turns a plan scenario into runnable Playwright TypeScript that follows your framework conventions.
+
+Input
+A plan file and a scenario number
+Output
+A Playwright .spec.ts file that runs and passes
+Constraint
+Verifies locators in a live browser before writing them. Asks before creating new page objects.
+
+Role 03
+
+Healer
+Diagnoses failing tests and fixes them — without weakening assertions or hiding real bugs.
+
+Input
+A failing test file
+Output
+A minimum-viable fix + a mandatory report explaining what was done
+Constraint
+Preserves assertion intent. Never softens tests. Never skips silently. Stops after 2 failed attempts.
+You can run them individually or chain them: Planner → Generator → Healer.
+
+04 Prerequisites
+
+Before starting, confirm the following:
+
+Node.js 18+ — run node --version
+VS Code 1.105 or later — agents need this version
+GitHub Copilot signed in with an active model
+Playwright 1.56 or later — run npx playwright --version
+Do not skip
+If any of these are outdated, update them first. Skipping this step causes hours of debugging later — most agent setup failures trace back to a version mismatch here.
+
+05 Installation
+
+Playwright MCP can be installed in two different ways depending on what you want to do. Pick the one that matches your goal.
+The two installation methods
+Method Command When to use
+
+Method A
+Standalone MCP server
+code --add-mcp '{"name":"playwright",...}'
+Give an AI browser control without using Playwright's built-in agents. Works globally across any project.
+
+Method B
+Bundled with agents (recommended)
+npx playwright init-agents --loop=vscode
+You are writing Playwright tests and want the Planner, Generator, Healer workflow. Runs inside a Playwright project.
+
+Method A gives you only the MCP server. Method B gives you the MCP server plus the three agent definitions, seed test, and workflow files — everything you need for the Planner/Generator/Healer workflow
+
+We do not need both. If we plan to write tests, use Method B.
